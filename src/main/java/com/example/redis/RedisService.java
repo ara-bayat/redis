@@ -19,4 +19,8 @@ public class RedisService {
     public String get(String key) {
         return stringRedisTemplate.opsForValue().get(key);
     }
+
+    public Long getSize(String key) {
+        return stringRedisTemplate.opsForValue().size(key);
+    }
 }

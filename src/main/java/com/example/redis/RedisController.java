@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/redis")
+@RequestMapping("/redis/string")
 public class RedisController {
 
     private final RedisService redisService;
@@ -49,6 +49,20 @@ public class RedisController {
         return ResponseEntity.ok(Map.of(
                 "key", key,
                 "value", value
+        ));
+    }
+
+    @GetMapping("/getSize/{key}")
+    public ResponseEntity<Map<String, String>> getSize(@PathVariable String key) {
+        Long value = redisService.getSize(key);
+
+        if (value == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "key", key,
+                "value", value.toString()
         ));
     }
 }
