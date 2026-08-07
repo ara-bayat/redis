@@ -5,7 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.Protocol;
+import redis.clients.jedis.commands.ProtocolCommand;
+import redis.clients.jedis.util.SafeEncoder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +15,9 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 public class RedisIncrexCommandsService {
+
+    // INCREX is not in Jedis 5.2 Protocol.Command enum; send as custom command
+    private static final ProtocolCommand INCREX = () -> SafeEncoder.encode("INCREX");
 
     private final JedisPool jedisPool;
 
@@ -46,27 +50,31 @@ public class RedisIncrexCommandsService {
                 args.add("ENX");
             }
 
-            // ارسال دستور INCREX با Jedis
-            Object rawResult = jedis.sendCommand(
-                    Protocol.Command.valueOf("INCREX"),
-                    args.toArray(new String[0])
-            );
+            Object rawResult = jedis.sendCommand(INCREX, args.toArray(new String[0]));
 
-            if (rawResult instanceof List) {
-                List<?> rawList = (List<?>) rawResult;
-                List<Long> result = new ArrayList<>();
-                for (Object item : rawList) {
-                    if (item instanceof Number) {
-                        result.add(((Number) item).longValue());
-                    } else {
-                        throw new IllegalStateException("Unexpected item type: " + item.getClass());
-                    }
-                }
-                return result;
-            } else {
+            if (!(rawResult instanceof List<?> rawList)) {
                 throw new IllegalStateException("Unexpected result type: " + rawResult.getClass());
             }
+
+            List<Long> result = new ArrayList<>(rawList.size());
+            for (Object item : rawList) {
+                result.add(toLong(item));
+            }
+            return result;
         }
+    }
+
+    private static Long toLong(Object item) {
+        if (item instanceof Number number) {
+            return number.longValue();
+        }
+        if (item instanceof byte[] bytes) {
+            return Long.parseLong(SafeEncoder.encode(bytes));
+        }
+        if (item instanceof String value) {
+            return Long.parseLong(value);
+        }
+        throw new IllegalStateException("Unexpected item type: " + item.getClass());
     }
 
     // متدهای عمومی (همان‌های قبلی)
