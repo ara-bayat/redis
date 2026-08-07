@@ -29,6 +29,8 @@ public class RedisJedisConfig {
         poolConfig.setMinIdle(2);
         poolConfig.setTestOnBorrow(true);
         poolConfig.setTestOnReturn(true);
+        // Avoid InstanceAlreadyExistsException: commons-pool2 and Spring both try to register the same MBean
+        poolConfig.setJmxEnabled(false);
 
         // اگر رمز عبور وجود دارد
         if (password != null && !password.isEmpty()) {
